@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        @apply scroll-smooth antialiased;
+    }
+
+    body {
+        @apply text-neutral-100;
+    }
+
+    ::selection {
+        @apply bg-brand-500/30 text-white;
+    }
+}
+
+@layer components {
+    .app-shell {
+        @apply min-h-screen bg-[#09090b] text-neutral-100;
+        background-image:
+            radial-gradient(ellipse 80% 50% at 0% -10%, rgba(79, 110, 247, 0.12), transparent),
+            radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 255, 255, 0.03), transparent);
+    }
+
+    .surface {
+        @apply rounded-2xl border border-white/[0.08] bg-neutral-900/80 shadow-soft backdrop-blur-sm;
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.4),
+            0 8px 24px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .surface-hover {
+        @apply transition duration-200 hover:border-white/[0.12] hover:bg-neutral-900/90;
+    }
+
+    .field-base {
+        @apply block w-full rounded-xl border border-white/10 bg-neutral-950/80 px-3.5 py-2.5 text-sm text-neutral-100 shadow-sm transition placeholder:text-neutral-500;
+        @apply focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
+    }
+
+    .field-base:disabled {
+        @apply cursor-not-allowed bg-neutral-900/50 text-neutral-500;
+    }
+
+    .checkbox-base {
+        @apply rounded border-white/20 bg-neutral-950 text-brand-500 focus:ring-brand-500/30;
+    }
+
+    .page-container {
+        @apply mx-auto w-full max-w-[1520px];
+    }
+
+    .table-shell thead {
+        @apply bg-neutral-900/90 text-[11px] font-semibold uppercase tracking-[0.07em] text-neutral-500;
+    }
+
+    .table-shell thead th {
+        @apply first:rounded-tl-2xl last:rounded-tr-2xl;
+    }
+
+    .table-shell tbody tr {
+        @apply transition-colors duration-150;
+    }
+
+    .link-accent {
+        @apply font-medium text-brand-400 underline-offset-2 transition hover:text-brand-300 hover:underline;
+    }
+
+    .tab-active {
+        @apply border-brand-500 text-brand-400;
+    }
+
+    .tab-inactive {
+        @apply border-transparent text-neutral-500 transition hover:border-white/10 hover:text-neutral-200;
+    }
+
+    .filter-panel {
+        @apply surface p-4 sm:p-5;
+    }
+
+    .data-table {
+        @apply table-shell min-w-full divide-y divide-white/[0.06] text-sm;
+    }
+
+    .data-table tbody tr {
+        @apply hover:bg-white/[0.03];
+    }
+
+    .nav-item {
+        @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150;
+    }
+
+    .nav-item-active {
+        @apply border border-white/10 bg-white/10 text-white shadow-soft;
+    }
+
+    .nav-item-active::before {
+        content: '';
+        @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-500;
+    }
+
+    .nav-item-inactive {
+        @apply text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-100;
+    }
+
+    .stat-accent-neutral {
+        @apply border-l-4 border-l-neutral-500;
+    }
+
+    .stat-accent-green {
+        @apply border-l-4 border-l-emerald-500;
+    }
+
+    .stat-accent-amber {
+        @apply border-l-4 border-l-amber-500;
+    }
+
+    .stat-accent-red {
+        @apply border-l-4 border-l-red-500;
+    }
+
+    .stat-accent-blue {
+        @apply border-l-4 border-l-brand-500;
+    }
+
+    .stat-accent-purple {
+        @apply border-l-4 border-l-purple-500;
+    }
+
+    .text-muted {
+        @apply text-neutral-400;
+    }
+
+    .text-heading {
+        @apply text-neutral-50;
+    }
+
+    /* Flatpickr dark */
+    .flatpickr-calendar {
+        @apply rounded-2xl border border-white/10 bg-neutral-900 shadow-float;
+        z-index: 9999 !important;
+        padding: 0.5rem;
+        width: 19rem;
+    }
+
+    .flatpickr-months .flatpickr-month {
+        @apply h-9;
+    }
+
+    .flatpickr-current-month {
+        @apply text-sm font-semibold text-neutral-100;
+    }
+
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-current-month input.cur-year {
+        @apply bg-neutral-900 font-semibold text-neutral-100;
+    }
+
+    span.flatpickr-weekday {
+        @apply text-[11px] font-semibold uppercase tracking-wide text-neutral-500;
+    }
+
+    .flatpickr-day {
+        @apply rounded-lg text-sm text-neutral-300;
+        max-width: 2.25rem;
+        height: 2.25rem;
+        line-height: 2.25rem;
+    }
+
+    .flatpickr-day.today {
+        @apply border border-white/20 bg-white/5 text-neutral-100;
+    }
+
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange,
+    .flatpickr-day.selected.today,
+    .flatpickr-day.selected.today:hover {
+        background: #ffffff !important;
+        border-color: #ffffff !important;
+        color: #171717 !important;
+    }
+
+    .flatpickr-day:hover:not(.selected):not(.startRange):not(.endRange) {
+        @apply bg-white/10 text-white;
+    }
+
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+        @apply rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white;
+        top: 0.35rem;
+        padding: 0.35rem;
+    }
+
+    .date-input:focus {
+        @apply outline-none ring-4 ring-brand-500/15;
+    }
+}

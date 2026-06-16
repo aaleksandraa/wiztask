@@ -1,0 +1,56 @@
+export const routes = {
+    login: () => '/login',
+    password: {
+        request: () => '/forgot-password',
+    },
+    dashboard: () => '/dashboard',
+    clients: {
+        index: () => '/klijenti',
+        show: (id: number) => `/klijenti/${id}`,
+        store: () => '/klijenti',
+        update: (id: number) => `/klijenti/${id}`,
+        destroy: (id: number) => `/klijenti/${id}`,
+    },
+    projects: {
+        index: () => '/projekti',
+        show: (id: number) => `/projekti/${id}`,
+        store: () => '/projekti',
+        update: (id: number) => `/projekti/${id}`,
+        destroy: (id: number) => `/projekti/${id}`,
+    },
+    tasks: {
+        index: () => '/taskovi',
+        show: (id: number) => `/taskovi/${id}`,
+        store: () => '/taskovi',
+        update: (id: number) => `/taskovi/${id}`,
+        destroy: (id: number) => `/taskovi/${id}`,
+        duplicate: (id: number) => `/taskovi/${id}/duplicate`,
+        archive: (id: number) => `/taskovi/${id}/archive`,
+        status: (id: number) => `/taskovi/${id}/status`,
+        paymentStatus: (id: number) => `/taskovi/${id}/payment-status`,
+        time: {
+            store: (id: number) => `/taskovi/${id}/vrijeme`,
+            update: (taskId: number, entryId: number) => `/taskovi/${taskId}/vrijeme/${entryId}`,
+            destroy: (taskId: number, entryId: number) => `/taskovi/${taskId}/vrijeme/${entryId}`,
+        },
+    },
+    time: {
+        index: () => '/vrijeme',
+        store: () => '/vrijeme',
+        update: (id: number) => `/vrijeme/${id}`,
+        destroy: (id: number) => `/vrijeme/${id}`,
+    },
+    reports: {
+        index: () => '/izvjestaji',
+        generate: () => '/izvjestaji',
+        exportPdf: () => '/izvjestaji/export/pdf',
+        exportExcel: () => '/izvjestaji/export/excel',
+        print: () => '/izvjestaji/print',
+    },
+    settings: {
+        edit: () => '/podesavanja',
+        update: () => '/podesavanja',
+    },
+    profile: () => '/profile',
+    logout: () => '/logout',
+};
