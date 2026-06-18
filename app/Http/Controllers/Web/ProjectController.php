@@ -64,6 +64,10 @@ class ProjectController extends Controller
                 'totalValue' => Money::format($project->totalValue(), $project->currency),
             ],
             'attachments' => ModelPresenter::attachmentsFor(Project::class, $project->id),
+            'defaults' => [
+                'task_date' => Dates::today(),
+                'hourly_rate' => $project->client->default_hourly_rate ?: AppSettings::defaultHourlyRate(),
+            ],
         ]);
     }
 

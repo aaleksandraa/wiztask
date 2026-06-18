@@ -32,3 +32,13 @@ export function taskFormPayload(data: ReturnType<typeof taskToFormData>) {
         minutes: Number(data.minutes),
     };
 }
+
+export function projectsForClient(
+    projectsByClient: Record<string, Record<string, string>>,
+    clientId: string | number,
+): Record<string, string> {
+    if (!clientId) return {};
+    const key = String(clientId);
+
+    return projectsByClient[key] ?? {};
+}

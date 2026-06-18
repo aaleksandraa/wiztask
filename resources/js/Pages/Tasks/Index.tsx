@@ -17,6 +17,7 @@ import Select from '@/Components/ui/Select';
 import { useOptimisticList } from '@/hooks/useOptimisticList';
 import { invalidateListCache } from '@/lib/listCache';
 import { routes } from '@/lib/routes';
+import { projectsForClient } from '@/lib/taskForm';
 import { formatMoney, optionsToSelect, recordToSelect } from '@/lib/utils';
 import type { Paginated, SharedProps, Task } from '@/types';
 
@@ -25,6 +26,7 @@ type Props = {
     filters: Record<string, string | undefined>;
     clients: Record<string, string>;
     filterProjects: Record<string, string>;
+    projectsByClient: Record<string, Record<string, string>>;
     defaults: { task_date: string; hourly_rate: number };
 };
 
@@ -47,7 +49,7 @@ const emptyTask = (defaults: Props['defaults']) => ({
     internal_note: '',
 });
 
-export default function TasksIndex({ tasks: serverTasks, filters, clients, filterProjects, defaults }: Props) {
+export default function TasksIndex({ tasks: serverTasks, filters, clients, filterProjects, projectsByClient, defaults }: Props) {
     const { options } = usePage<SharedProps>().props;
     const { list: tasks, isStale, fetchList, optimisticRemove } = useOptimisticList('tasks', filters, serverTasks);
     const [modalOpen, setModalOpen] = useState(false);
@@ -85,10 +87,18 @@ export default function TasksIndex({ tasks: serverTasks, filters, clients, filte
 
     const openCreate = () => {
         setEditing(null);
-        form.setData(emptyTask(defaults));
-        if (filterForm.data.client_id) form.setData('client_id', filterForm.data.client_id);
+        const data = emptyTask(defaults);
+        if (filterForm.data.client_id) data.client_id = filterForm.data.client_id;
+        if (filterForm.data.project_id) data.project_id = filterForm.data.project_id;
+        form.setData(data);
         form.clearErrors();
         setModalOpen(true);
+    };
+
+    const formProjects = projectsForClient(projectsByClient, form.data.client_id);
+
+    const onFormClientChange = (clientId: string) => {
+        form.setData({ ...form.data, client_id: clientId, project_id: '' });
     };
 
     const openEdit = (task: Task) => {
@@ -348,10 +358,19 @@ export default function TasksIndex({ tasks: serverTasks, filters, clients, filte
                     <Select
                         label="Klijent *"
                         value={form.data.client_id}
-                        onChange={(e) => form.setData('client_id', e.target.value)}
+                        onChange={(e) => onFormClientChange(e.target.value)}
                         options={recordToSelect(clients)}
                         placeholder="Odaberi klijenta"
                         error={form.errors.client_id}
+                    />
+                    <Select
+                        label="Projekat"
+                        value={form.data.project_id}
+                        onChange={(e) => form.setData('project_id', e.target.value)}
+                        options={recordToSelect(formProjects)}
+                        placeholder="Bez projekta"
+                        error={form.errors.project_id}
+                        disabled={!form.data.client_id}
                     />
                     <Input
                         label="Naslov *"

@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import TaskBillingFields from '@/Components/TaskBillingFields';
 import AppLayout from '@/Layouts/AppLayout';
 import AttachmentPanel from '@/Components/AttachmentPanel';
 import Badge from '@/Components/ui/Badge';
@@ -10,6 +11,7 @@ import DateInput from '@/Components/ui/DateInput';
 import EditableTextarea from '@/Components/ui/EditableTextarea';
 import Empty from '@/Components/ui/Empty';
 import Input from '@/Components/ui/Input';
+import Modal from '@/Components/ui/Modal';
 import PageHeader from '@/Components/ui/PageHeader';
 import Select from '@/Components/ui/Select';
 import Stat from '@/Components/ui/Stat';
@@ -23,12 +25,72 @@ type Props = {
     tasks: Task[];
     stats: { totalMinutes: string; totalValue: string };
     attachments: Attachment[];
+    defaults: { task_date: string; hourly_rate: number };
 };
 
-export default function ProjectsShow({ project, tasks, stats, attachments }: Props) {
+export default function ProjectsShow({ project, tasks, stats, attachments, defaults }: Props) {
     const { options } = usePage<SharedProps>().props;
+    const [taskModal, setTaskModal] = useState(false);
 
     const editForm = useForm(projectToFormData(project));
+
+    const taskForm = useForm({
+        client_id: project.client_id,
+        project_id: project.id,
+        title: '',
+        description: '',
+        status: 'novo',
+        priority: 'normalan',
+        task_date: defaults.task_date,
+        due_date: '',
+        billing_type: 'po_satu',
+        hourly_rate: String(defaults.hourly_rate),
+        fixed_price: '0',
+        hours: '0',
+        minutes: '0',
+        is_billable: true,
+        payment_status: 'za_naplatu',
+        internal_note: '',
+    });
+
+    const openTaskModal = () => {
+        taskForm.setData({
+            client_id: project.client_id,
+            project_id: project.id,
+            title: '',
+            description: '',
+            status: 'novo',
+            priority: 'normalan',
+            task_date: defaults.task_date,
+            due_date: '',
+            billing_type: 'po_satu',
+            hourly_rate: String(defaults.hourly_rate),
+            fixed_price: '0',
+            hours: '0',
+            minutes: '0',
+            is_billable: true,
+            payment_status: 'za_naplatu',
+            internal_note: '',
+        });
+        taskForm.clearErrors();
+        setTaskModal(true);
+    };
+
+    const saveTask = (e: React.FormEvent) => {
+        e.preventDefault();
+        taskForm.transform((d) => ({
+            ...d,
+            client_id: Number(d.client_id),
+            project_id: Number(d.project_id),
+            hourly_rate: Number(d.hourly_rate),
+            fixed_price: Number(d.fixed_price),
+            hours: Number(d.hours),
+            minutes: Number(d.minutes),
+        }));
+        taskForm.post(routes.tasks.store(), {
+            onSuccess: () => setTaskModal(false),
+        });
+    };
 
     useEffect(() => {
         const data = projectToFormData(project);
@@ -177,7 +239,16 @@ export default function ProjectsShow({ project, tasks, stats, attachments }: Pro
                 </Card>
             </div>
 
-            <Card title="Taskovi" padding="p-0" className="mb-6">
+            <Card
+                title="Taskovi"
+                padding="p-0"
+                className="mb-6"
+                action={
+                    <Button size="sm" onClick={openTaskModal}>
+                        + Dodaj novi task
+                    </Button>
+                }
+            >
                 <table className="data-table">
                     <thead>
                         <tr>
@@ -192,7 +263,11 @@ export default function ProjectsShow({ project, tasks, stats, attachments }: Pro
                         {tasks.length === 0 ? (
                             <tr>
                                 <td colSpan={5}>
-                                    <Empty text="Nema taskova na ovom projektu." />
+                                    <Empty text="Nema taskova na ovom projektu.">
+                                        <Button size="sm" onClick={openTaskModal}>
+                                            + Dodaj novi task
+                                        </Button>
+                                    </Empty>
                                 </td>
                             </tr>
                         ) : (
@@ -217,6 +292,88 @@ export default function ProjectsShow({ project, tasks, stats, attachments }: Pro
             </Card>
 
             <AttachmentPanel type="project" id={project.id} initial={attachments} />
+
+            <Modal open={taskModal} onClose={() => setTaskModal(false)} title="Novi task" maxWidth="max-w-2xl">
+                <form onSubmit={saveTask} className="space-y-4">
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm">
+                        <div className="text-neutral-400">Klijent</div>
+                        <div className="font-medium text-neutral-100">{project.client?.name ?? '-'}</div>
+                        <div className="mt-2 text-neutral-400">Projekat</div>
+                        <div className="font-medium text-neutral-100">{project.name}</div>
+                    </div>
+                    <Input
+                        label="Naslov *"
+                        value={taskForm.data.title}
+                        onChange={(e) => taskForm.setData('title', e.target.value)}
+                        placeholder="Opis posla"
+                        error={taskForm.errors.title}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <DateInput
+                            label="Datum"
+                            value={taskForm.data.task_date}
+                            onChange={(e) => taskForm.setData('task_date', e.target.value)}
+                        />
+                        <Select
+                            label="Status"
+                            value={taskForm.data.status}
+                            onChange={(e) => taskForm.setData('status', e.target.value)}
+                            options={optionsToSelect(options.taskStatuses)}
+                        />
+                        <Select
+                            label="Prioritet"
+                            value={taskForm.data.priority}
+                            onChange={(e) => taskForm.setData('priority', e.target.value)}
+                            options={optionsToSelect(options.taskPriorities)}
+                        />
+                        <TaskBillingFields
+                            billingType={taskForm.data.billing_type}
+                            onBillingTypeChange={(value) => taskForm.setData('billing_type', value)}
+                            billingTypeOptions={options.taskBillingTypes}
+                            hourlyRate={taskForm.data.hourly_rate}
+                            onHourlyRateChange={(value) => taskForm.setData('hourly_rate', value)}
+                            fixedPrice={taskForm.data.fixed_price}
+                            onFixedPriceChange={(value) => taskForm.setData('fixed_price', value)}
+                            hours={taskForm.data.hours}
+                            onHoursChange={(value) => taskForm.setData('hours', value)}
+                            minutes={taskForm.data.minutes}
+                            onMinutesChange={(value) => taskForm.setData('minutes', value)}
+                            errors={taskForm.errors}
+                        />
+                        <DateInput
+                            label="Rok"
+                            value={taskForm.data.due_date}
+                            onChange={(e) => taskForm.setData('due_date', e.target.value)}
+                        />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={taskForm.data.is_billable}
+                            onChange={(e) => taskForm.setData('is_billable', e.target.checked)}
+                            className="checkbox-base"
+                        />
+                        Naplativo
+                    </label>
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-neutral-300">Opis</label>
+                        <textarea
+                            value={taskForm.data.description}
+                            onChange={(e) => taskForm.setData('description', e.target.value)}
+                            rows={2}
+                            className="field-base"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" variant="secondary" onClick={() => setTaskModal(false)}>
+                            Otkaži
+                        </Button>
+                        <Button type="submit" disabled={taskForm.processing}>
+                            Sačuvaj task
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </AppLayout>
     );
 }

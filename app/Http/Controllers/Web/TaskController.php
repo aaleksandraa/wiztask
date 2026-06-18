@@ -14,6 +14,7 @@ use App\Support\Money;
 use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,6 +50,12 @@ class TaskController extends Controller
             'filterProjects' => $request->client_id
                 ? Project::where('client_id', $request->client_id)->orderBy('name')->pluck('name', 'id')
                 : [],
+            'projectsByClient' => Project::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'client_id'])
+                ->groupBy('client_id')
+                ->map(fn ($projects) => $projects->pluck('name', 'id'))
+                ->all(),
             'defaults' => [
                 'task_date' => Dates::today(),
                 'hourly_rate' => AppSettings::defaultHourlyRate(),
@@ -207,7 +214,10 @@ class TaskController extends Controller
     {
         return $request->validate([
             'client_id' => ['required', 'exists:clients,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
+            'project_id' => [
+                'nullable',
+                Rule::exists('projects', 'id')->where(fn ($q) => $q->where('client_id', $request->input('client_id'))),
+            ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:'.implode(',', array_keys(Options::TASK_STATUSES))],
