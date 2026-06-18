@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             'app_name' => 'WizTask',
             'default_currency' => 'KM',
             'default_hourly_rate' => '40',
-            'allowed_file_types' => 'jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,zip',
+            'allowed_file_types' => '*',
         ];
 
         foreach ($defaults as $key => $value) {

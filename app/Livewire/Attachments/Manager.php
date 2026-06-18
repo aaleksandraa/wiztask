@@ -3,7 +3,7 @@
 namespace App\Livewire\Attachments;
 
 use App\Models\Attachment;
-use App\Support\AppSettings;
+use App\Support\AttachmentUpload;
 use App\Support\Options;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Validate;
@@ -21,33 +21,38 @@ class Manager extends Component
     public array $files = [];
     public string $category = 'ostalo';
     public string $description = '';
+    public string $external_path = '';
+    public string $path_label = '';
 
     public function updatedFiles(): void
     {
-        $allowed = AppSettings::allowedFileTypes();
         $this->validate([
-            'files.*' => ['file', 'max:20480', 'mimes:'.implode(',', $allowed)],
+            'files.*' => ['file', 'max:20480'],
         ], [], ['files.*' => 'fajl']);
+
+        foreach ($this->files as $file) {
+            AttachmentUpload::assertAllowedExtension($file);
+        }
     }
 
     public function upload(): void
     {
-        $allowed = AppSettings::allowedFileTypes();
-
         $this->validate([
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['file', 'max:20480', 'mimes:'.implode(',', $allowed)],
+            'files.*' => ['file', 'max:20480'],
             'category' => ['required', 'in:'.implode(',', array_keys(Options::ATTACHMENT_CATEGORIES))],
         ], [], ['files.*' => 'fajl']);
 
         $folder = 'attachments/'.Str::of($this->attachableType)->afterLast('\\')->lower().'/'.$this->attachableId;
 
         foreach ($this->files as $file) {
+            AttachmentUpload::assertAllowedExtension($file);
             $stored = $file->store($folder, 'public');
 
             Attachment::create([
                 'attachable_type' => $this->attachableType,
                 'attachable_id' => $this->attachableId,
+                'kind' => 'upload',
                 'filename' => basename($stored),
                 'original_name' => $file->getClientOriginalName(),
                 'path' => $stored,
@@ -61,6 +66,35 @@ class Manager extends Component
         $this->reset('files', 'description');
         $this->dispatch('attachments-updated');
         session()->flash('success', 'Fajlovi su dodani.');
+    }
+
+    public function addExternalPath(): void
+    {
+        $this->validate([
+            'external_path' => ['required', 'string', 'min:3', 'max:2048'],
+            'path_label' => ['nullable', 'string', 'max:255'],
+            'category' => ['required', 'in:'.implode(',', array_keys(Options::ATTACHMENT_CATEGORIES))],
+        ]);
+
+        $path = trim($this->external_path);
+
+        Attachment::create([
+            'attachable_type' => $this->attachableType,
+            'attachable_id' => $this->attachableId,
+            'kind' => 'link',
+            'filename' => '',
+            'original_name' => AttachmentUpload::originalNameFromPath($path, $this->path_label ?: null),
+            'path' => '',
+            'external_path' => $path,
+            'mime_type' => null,
+            'size' => 0,
+            'category' => $this->category,
+            'description' => $this->description ?: null,
+        ]);
+
+        $this->reset('external_path', 'path_label', 'description');
+        $this->dispatch('attachments-updated');
+        session()->flash('success', 'Putanja je sačuvana.');
     }
 
     public function deleteAttachment(int $id): void

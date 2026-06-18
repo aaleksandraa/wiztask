@@ -82,7 +82,9 @@ export default function SettingsEdit({ form: initial }: Props) {
                         {form.errors.allowed_file_types && (
                             <p className="mt-1 text-xs text-red-400">{form.errors.allowed_file_types}</p>
                         )}
-                        <p className="mt-1 text-xs text-neutral-500">Odvojite ekstenzije zarezom (npr. jpg,png,pdf)</p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                            Unesite <span className="font-mono">*</span> za sve tipove fajlova, ili listu ekstenzija odvojenih zarezom (npr. xml,pdf,jpg)
+                        </p>
                     </div>
                     <div className="flex justify-end pt-2">
                         <Button type="submit" disabled={form.processing}>

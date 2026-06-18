@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from '@/bootstrap';
-import { cn, label } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Attachment, SharedProps } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { FileText, Loader2, Trash2, Upload, X, ZoomIn } from 'lucide-react';
+import { Copy, FileText, FolderOpen, Link2, Loader2, Trash2, Upload, X, ZoomIn } from 'lucide-react';
 import Badge from './ui/Badge';
+import Button from './ui/Button';
 import Card from './ui/Card';
+import Input from './ui/Input';
 import Select from './ui/Select';
 
 type Props = {
@@ -23,6 +25,31 @@ type UploadItem = {
     error?: string;
 };
 
+function mergePathWithFileName(currentPath: string, fileName: string): string {
+    const trimmed = currentPath.trim();
+    if (!trimmed) return fileName;
+
+    const separator = trimmed.includes('\\') ? '\\' : trimmed.includes('/') ? '/' : '\\';
+
+    if (/[\\/]$/.test(trimmed)) {
+        return trimmed + fileName;
+    }
+
+    const lastSeparator = Math.max(trimmed.lastIndexOf('\\'), trimmed.lastIndexOf('/'));
+    const lastSegment = lastSeparator >= 0 ? trimmed.slice(lastSeparator + 1) : trimmed;
+    const looksLikeFile = lastSegment.includes('.') && !lastSegment.endsWith('.');
+
+    if (lastSeparator >= 0 && looksLikeFile) {
+        return trimmed.slice(0, lastSeparator + 1) + fileName;
+    }
+
+    if (lastSeparator >= 0) {
+        return `${trimmed}${separator}${fileName}`;
+    }
+
+    return `${trimmed}${separator}${fileName}`;
+}
+
 export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i dokazi rada' }: Props) {
     const { options } = usePage<SharedProps>().props;
     const [items, setItems] = useState<Attachment[]>(initial);
@@ -30,6 +57,22 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
     const [description, setDescription] = useState('');
     const [uploading, setUploading] = useState<UploadItem[]>([]);
     const [preview, setPreview] = useState<Attachment | null>(null);
+    const [externalPath, setExternalPath] = useState('');
+    const [pathLabel, setPathLabel] = useState('');
+    const [addingPath, setAddingPath] = useState(false);
+    const [pathError, setPathError] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<number | null>(null);
+    const pathFileInputRef = useRef<HTMLInputElement>(null);
+
+    const onPathFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        setExternalPath((current) => mergePathWithFileName(current, file.name));
+        setPathLabel((current) => current.trim() || file.name);
+        setPathError(null);
+    };
 
     const uploadFile = useCallback(
         async (file: File) => {
@@ -53,11 +96,13 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                 const message =
                     axios.isAxiosError(err) && err.response?.data?.message
                         ? String(err.response.data.message)
-                        : 'Upload nije uspio.';
+                        : axios.isAxiosError(err) && err.response?.data?.errors?.file?.[0]
+                          ? String(err.response.data.errors.file[0])
+                          : 'Upload nije uspio.';
                 setUploading((prev) =>
                     prev.map((u) => (u.key === key ? { ...u, progress: 'error', error: message } : u)),
                 );
-                setTimeout(() => setUploading((prev) => prev.filter((u) => u.key !== key)), 4000);
+                setTimeout(() => setUploading((prev) => prev.filter((u) => u.key !== key)), 5000);
             }
         },
         [category, description, id, type],
@@ -76,6 +121,49 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
         multiple: true,
     });
 
+    const addExternalPath = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPathError(null);
+
+        const trimmed = externalPath.trim();
+        if (!trimmed) {
+            setPathError('Unesite putanju do fajla.');
+            return;
+        }
+
+        setAddingPath(true);
+        try {
+            const { data } = await axios.post<{ attachment: Attachment }>('/api/attachments', {
+                type,
+                id,
+                external_path: trimmed,
+                label: pathLabel.trim() || undefined,
+                category,
+                description: description || undefined,
+            });
+            setItems((prev) => [data.attachment, ...prev]);
+            setExternalPath('');
+            setPathLabel('');
+        } catch (err: unknown) {
+            const message =
+                axios.isAxiosError(err) && err.response?.data?.errors?.external_path?.[0]
+                    ? String(err.response.data.errors.external_path[0])
+                    : axios.isAxiosError(err) && err.response?.data?.message
+                      ? String(err.response.data.message)
+                      : 'Spremanje putanje nije uspjelo.';
+            setPathError(message);
+        } finally {
+            setAddingPath(false);
+        }
+    };
+
+    const copyPath = async (attachment: Attachment) => {
+        if (!attachment.external_path) return;
+        await navigator.clipboard.writeText(attachment.external_path);
+        setCopiedId(attachment.id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
     const remove = async (attachment: Attachment) => {
         if (!confirm('Obrisati fajl?')) return;
         await axios.delete(`/api/attachments/${attachment.id}`);
@@ -89,7 +177,7 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
 
     return (
         <Card title={title}>
-            <div className="space-y-4">
+            <div className="space-y-6">
                 <div className="grid gap-3 sm:grid-cols-3">
                     <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -127,7 +215,7 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                     <Upload className={cn('mx-auto h-9 w-9 transition', isDragActive ? 'text-brand-400' : 'text-neutral-500')} />
                     <p className="mt-3 text-sm font-semibold text-neutral-200">Prevuci fajlove ovdje</p>
                     <p className="mt-1 text-xs text-neutral-500">ili klikni za odabir — upload odmah</p>
-                    <p className="mt-1 text-xs text-neutral-400">Slike, PDF, dokumenti · max 20MB</p>
+                    <p className="mt-1 text-xs text-neutral-400">Svi tipovi fajlova (XML, PDF, slike, arhive…) · max 20MB</p>
                     <button
                         type="button"
                         onClick={open}
@@ -135,6 +223,58 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                     >
                         Odaberi fajlove
                     </button>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-brand-400" />
+                        <h4 className="text-sm font-semibold text-neutral-100">Lokalna putanja na računaru</h4>
+                    </div>
+                    <p className="mb-4 text-xs text-neutral-500">
+                        Sačuvaj referencu na fajl koji već postoji na vašem računaru ili mrežnom disku (npr.{' '}
+                        <span className="font-mono text-neutral-400">C:\Projekti\izvjestaj.xml</span> ili{' '}
+                        <span className="font-mono text-neutral-400">\\server\share\doc.pdf</span>).
+                    </p>
+                    <form onSubmit={addExternalPath} className="space-y-3">
+                        <input
+                            ref={pathFileInputRef}
+                            type="file"
+                            className="hidden"
+                            onChange={onPathFileSelected}
+                        />
+                        <div>
+                            <Input
+                                label="Putanja *"
+                                value={externalPath}
+                                onChange={(e) => setExternalPath(e.target.value)}
+                                placeholder="C:\Users\Ime\Documents\fajl.xml"
+                            />
+                            <p className="mt-1.5 text-xs text-neutral-500">
+                                Browser ne može proslijediti punu putanju — unesite prefiks ručno (npr.{' '}
+                                <span className="font-mono text-neutral-400">C:\Projekti\</span>) pa kliknite Odaberi fajl.
+                            </p>
+                        </div>
+                        <Input
+                            label="Naziv (opcionalno)"
+                            value={pathLabel}
+                            onChange={(e) => setPathLabel(e.target.value)}
+                            placeholder="Prikazni naziv — ako je prazno, koristi se ime fajla iz putanje"
+                        />
+                        {pathError && <p className="text-xs text-red-400">{pathError}</p>}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => pathFileInputRef.current?.click()}
+                            >
+                                Odaberi fajl
+                            </Button>
+                            <Button type="submit" variant="secondary" disabled={addingPath}>
+                                <Link2 className="h-4 w-4" />
+                                {addingPath ? 'Spremanje...' : 'Dodaj putanju'}
+                            </Button>
+                        </div>
+                    </form>
                 </div>
 
                 {uploading.length > 0 && (
@@ -165,8 +305,10 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                                 key={att.id}
                                 className="group overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 shadow-sm transition hover:border-white/15 hover:shadow-md"
                             >
-                                <div className="relative flex h-32 items-center justify-center bg-neutral-950/80">
-                                    {att.is_image ? (
+                                <div className="relative flex h-32 items-center justify-center bg-neutral-950/80 p-3">
+                                    {att.is_link ? (
+                                        <FolderOpen className="h-10 w-10 text-brand-400" />
+                                    ) : att.is_image && att.url ? (
                                         <>
                                             <img
                                                 src={att.url}
@@ -189,6 +331,11 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                                     <p className="truncate text-xs font-medium" title={att.original_name}>
                                         {att.original_name}
                                     </p>
+                                    {att.is_link && att.external_path && (
+                                        <p className="mt-1 line-clamp-2 font-mono text-[10px] text-neutral-500" title={att.external_path}>
+                                            {att.external_path}
+                                        </p>
+                                    )}
                                     <div className="mt-1.5 flex items-center justify-between gap-1">
                                         <Badge value={att.category} map={options.attachmentCategories} className="text-[10px]" />
                                         <span className="text-[10px] text-neutral-400">{att.human_size}</span>
@@ -196,13 +343,24 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                                     {att.description && (
                                         <p className="mt-1 truncate text-[11px] text-neutral-400">{att.description}</p>
                                     )}
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <a
-                                            href={att.download_url}
-                                            className="text-xs font-medium text-neutral-200 hover:underline"
-                                        >
-                                            Download
-                                        </a>
+                                    <div className="mt-2 flex items-center justify-between gap-1">
+                                        {att.is_link ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => copyPath(att)}
+                                                className="inline-flex items-center gap-1 text-xs font-medium text-brand-400 hover:text-brand-300"
+                                            >
+                                                <Copy className="h-3 w-3" />
+                                                {copiedId === att.id ? 'Kopirano' : 'Kopiraj putanju'}
+                                            </button>
+                                        ) : att.download_url ? (
+                                            <a
+                                                href={att.download_url}
+                                                className="text-xs font-medium text-neutral-200 hover:underline"
+                                            >
+                                                Download
+                                            </a>
+                                        ) : null}
                                         <button
                                             type="button"
                                             onClick={() => remove(att)}
@@ -218,7 +376,7 @@ export default function AttachmentPanel({ type, id, initial, title = 'Fajlovi i 
                 )}
             </div>
 
-            {preview && (
+            {preview?.url && (
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
                     onClick={() => setPreview(null)}

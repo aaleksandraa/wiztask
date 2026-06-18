@@ -397,7 +397,9 @@ export default function ClientsShow({
                                     className="overflow-hidden rounded-lg border border-white/10"
                                 >
                                     <div className="flex h-24 items-center justify-center bg-neutral-950/80">
-                                        {att.is_image ? (
+                                        {att.is_link ? (
+                                            <span className="text-3xl text-neutral-500">📁</span>
+                                        ) : att.is_image && att.url ? (
                                             <img src={att.url} loading="lazy" alt="" className="h-full w-full object-cover" />
                                         ) : (
                                             <span className="text-3xl text-neutral-500">📄</span>
@@ -405,9 +407,15 @@ export default function ClientsShow({
                                     </div>
                                     <div className="p-2">
                                         <div className="truncate text-xs">{att.original_name}</div>
-                                        <a href={att.download_url} className="text-[11px] font-medium link-accent">
-                                            Download
-                                        </a>
+                                        {att.is_link && att.external_path ? (
+                                            <p className="mt-0.5 truncate font-mono text-[10px] text-neutral-500" title={att.external_path}>
+                                                {att.external_path}
+                                            </p>
+                                        ) : att.download_url ? (
+                                            <a href={att.download_url} className="text-[11px] font-medium link-accent">
+                                                Download
+                                            </a>
+                                        ) : null}
                                     </div>
                                 </div>
                             ))}

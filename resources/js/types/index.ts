@@ -1,9 +1,12 @@
 export type Attachment = {
     id: number;
+    kind: 'upload' | 'link';
     original_name: string;
-    url: string;
-    download_url: string;
-    mime_type: string;
+    url: string | null;
+    download_url: string | null;
+    external_path: string | null;
+    is_link: boolean;
+    mime_type: string | null;
     size: number;
     human_size: string;
     is_image: boolean;
